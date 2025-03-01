@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Gastos - Reforma</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            width: 90%;
+            max-width: 900px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        label, input, select, button {
+            display: block;
+            width: 100%;
+            margin-top: 10px;
+        }
+        input, select {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .btn-excluir {
+            background-color: #dc3545;
+        }
+        .btn-excluir:hover {
+            background-color: #c82333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+        .progress-bar {
+            width: 100%;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .progress {
+            height: 20px;
+            background-color: #28a745;
+            text-align: center;
+            color: white;
+            width: 0%;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Controle de Gastos da Reforma</h2>
+        <label>Descrição: <input type="text" id="descricao"></label>
+        <label>Valor: <input type="number" id="valor"></label>
+        <label>Data: <input type="date" id="data"></label>
+        <label>
+            Tipo:
+            <select id="tipo" onchange="toggleParcelas()">
+                <option value="À vista">À vista</option>
+                <option value="Parcelado">Parcelado</option>
+            </select>
+        </label>
+        <label id="parcelas-label" style="display: none;">Parcelas: <input type="number" id="parcelas" min="1" value="1"></label>
+        <button onclick="adicionarGasto()">Adicionar Gasto</button>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Descrição</th>
+                    <th>Valor</th>
+                    <th>Data</th>
+                    <th>Tipo</th>
+                    <th>Parcelas</th>
+                    <th>Progresso</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-gastos"></tbody>
+        </table>
+        <h3>Total: R$ <span id="total">0.00</span></h3>
+    </div>
+    
+    <script>
+        let totalGastos = 0;
+
+        function toggleParcelas() {
+            let tipo = document.getElementById('tipo').value;
+            document.getElementById('parcelas-label').style.display = tipo === 'Parcelado' ? 'inline' : 'none';
+        }
+
+        function adicionarGasto() {
+            let descricao = document.getElementById('descricao').value;
+            let valor = parseFloat(document.getElementById('valor').value);
+            let data = document.getElementById('data').value;
+            let tipo = document.getElementById('tipo').value;
+            let parcelas = tipo === 'Parcelado' ? parseInt(document.getElementById('parcelas').value) : 1;
+
+            if (descricao === "" || isNaN(valor) || data === "" || parcelas < 1) {
+                alert("Preencha todos os campos corretamente.");
+                return;
+            }
+
+            let tabela = document.getElementById('tabela-gastos');
+            let novaLinha = tabela.insertRow();
+            let celDescricao = novaLinha.insertCell(0);
+            let celValor = novaLinha.insertCell(1);
+            let celData = novaLinha.insertCell(2);
+            let celTipo = novaLinha.insertCell(3);
+            let celParcelas = novaLinha.insertCell(4);
+            let celProgresso = novaLinha.insertCell(5);
+            let celAcoes = novaLinha.insertCell(6);
+
+            let valorParcela = (valor / parcelas).toFixed(2);
+            let progresso = 0;
+            
+            celDescricao.innerText = descricao;
+            celValor.innerText = `R$ ${valor.toFixed(2)}`;
+            celData.innerText = data;
+            celTipo.innerText = tipo;
+            celParcelas.innerText = tipo === 'Parcelado' ? `${parcelas}x de R$ ${valorParcela}` : "-";
+            celProgresso.innerHTML = `<div class='progress-bar'><div class='progress' style='width: ${progresso}%'>${progresso}%</div></div>`;
+            celAcoes.innerHTML = `
+                <button class='btn-excluir' onclick='excluirGasto(this, ${valor})'>Excluir</button>
+                ${tipo === 'Parcelado' ? `<button onclick='pagarParcela(this, ${100 / parcelas})'>Pagar Parcela</button>` : ''}
+            `;
+            
+            totalGastos += valor;
+            document.getElementById('total').innerText = totalGastos.toFixed(2);
+            salvarGastos();
+            limparCampos();
+        }
+
+        function excluirGasto(btn, valor) {
+            let linha = btn.closest('tr');
+            linha.remove();
+            totalGastos -= valor;
+            document.getElementById('total').innerText = totalGastos.toFixed(2);
+            salvarGastos();
+        }
+
+        function pagarParcela(btn, progresso) {
+            let linha = btn.closest('tr');
+            let progressoBar = linha.cells[5].querySelector('.progress');
+            let progressoAtual = parseFloat(progressoBar.style.width) || 0;
+            progressoAtual += progresso;
+
+            if (progressoAtual > 100) progressoAtual = 100;
+            progressoBar.style.width = `${progressoAtual}%`;
+            progressoBar.innerText = `${Math.round(progressoAtual)}%`;
+
+            salvarGastos();
+        }
+
+        function salvarGastos() {
+            let tabela = document.getElementById('tabela-gastos');
+            let gastos = [];
+
+            for (let i = 0; i < tabela.rows.length; i++) {
+                let row = tabela.rows[i];
+                let descricao = row.cells[0].innerText;
+                let valor = row.cells[1].innerText;
+                let data = row.cells[2].innerText;
+                let tipo = row.cells[3].innerText;
+                let parcelas = row.cells[4].innerText;
+                let progresso = row.cells[5].querySelector('.progress').style.width;
+                
+                gastos.push({ descricao, valor, data, tipo, parcelas, progresso });
+            }
+            
+            localStorage.setItem('gastos', JSON.stringify(gastos));
+        }
+
+        function carregarGastos() {
+            let gastos = JSON.parse(localStorage.getItem('gastos'));
+            if (gastos) {
+                gastos.forEach(gasto => {
+                    let tabela = document.getElementById('tabela-gastos');
+                    let novaLinha = tabela.insertRow();
+                    novaLinha.insertCell(0).innerText = gasto.descricao;
+                    novaLinha.insertCell(1).innerText = gasto.valor;
+                    novaLinha.insertCell(2).innerText = gasto.data;
+                    novaLinha.insertCell(3).innerText = gasto.tipo;
+                    novaLinha.insertCell(4).innerText = gasto.parcelas;
+                    novaLinha.insertCell(5).innerHTML = `<div class='progress-bar'><div class='progress' style='width: ${gasto.progresso}'>${gasto.progresso}</div></div>`;
+                    novaLinha.insertCell(6).innerHTML = `<button class='btn-excluir' onclick='excluirGasto(this, ${parseFloat(gasto.valor)})'>Excluir</button>`;
+                });
+            }
+        }
+
+        function limparCampos() {
+            document.getElementById('descricao').value = '';
+            document.getElementById('valor').value = '';
+            document.getElementById('data').value = '';
+            document.getElementById('parcelas').value = '1';
+        }
+
+        window.onload = carregarGastos;
+    </script>
+</body>
+</html>
